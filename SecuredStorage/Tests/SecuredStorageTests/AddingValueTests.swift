@@ -1,7 +1,7 @@
 import XCTest
 @testable import SecuredStorage
 
-final class AddingValueToSecuredStorageWithGroupTests: XCTestCase {
+final class AddingValueTests: XCTestCase {
     private let storageName = "stubServiceName"
     private let accessGroup = "stubAccessGroup"
     private let key = "stubKey"
@@ -54,15 +54,6 @@ final class AddingValueToSecuredStorageWithGroupTests: XCTestCase {
         XCTAssertEqual(result, .failure(errSecMemoryError))
     }
 
-    func testOtherMethodsNotToEnterInAddItem() {
-        _ = storage.removeValue(key: key, accessibility: accessibility)
-        _ = storage.searchAllValues(accessibility: accessibility)
-        _ = storage.searchValue(key: key, accessibility: accessibility)
-        _ = storage.updateValue(key: key, value: value, accessibility: accessibility)
-
-        XCTAssertEqual(spy.entranceCount, .zero)
-    }
-
     override func tearDown() {
         spy.tearDown()
     }
@@ -95,6 +86,7 @@ class SpyForAddItem: SecuredDataProvider {
     func updateItem(query: CFDictionary, attributesToUpdate: CFDictionary) -> OSStatus {
         otherMethodsLogic()
     }
+    
     func deleteItem(query: CFDictionary) -> OSStatus {
         otherMethodsLogic()
     }

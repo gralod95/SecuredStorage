@@ -1,7 +1,7 @@
 import XCTest
 @testable import SecuredStorage
 
-final class UpdateValueInSecuredStorageWithGroupTests: XCTestCase {
+final class RemoveValueTests: XCTestCase {
     private let storageName = "stubServiceName"
     private let accessGroup = "stubAccessGroup"
     private let key = "stubKey"
@@ -14,11 +14,8 @@ final class UpdateValueInSecuredStorageWithGroupTests: XCTestCase {
         kSecAttrAccessGroup as String: "stubAccessGroup",
         kSecAttrAccount as String: "stubKey"
     ] as CFDictionary
-    private let outputAttributesToUpdate = [
-        kSecValueData as String: "stubValue".data(using: .utf8)!
-    ] as CFDictionary
 
-    let spy: SpyForUpdateItem = .init()
+    let spy: SpyForRemoveItem = .init()
 
     lazy var storage = SecuredStorage(
         name: storageName,
@@ -26,35 +23,24 @@ final class UpdateValueInSecuredStorageWithGroupTests: XCTestCase {
         dataProvider: spy
     )
 
-    func testUpdateValueSuccessfully() {
+    func testRemoveValueSuccessfully() {
         spy.result = errSecSuccess
-        let result = storage.updateValue(key: key, value: value, accessibility: accessibility)
+        let result = storage.removeValue(key: key, accessibility: accessibility)
 
         XCTAssertEqual(spy.entranceCount, 1)
         XCTAssertEqual(spy.entranceToOtherMethods, 0)
         XCTAssertEqual(spy.query, outputQuery)
-        XCTAssertEqual(spy.attributesToUpdate, outputAttributesToUpdate)
         XCTAssertEqual(result, .success)
     }
 
-    func testUpdateValueFailed() {
+    func testRemoveValueFailure() {
         spy.result = errSecMemoryError
-        let result = storage.updateValue(key: key, value: value, accessibility: accessibility)
+        let result = storage.removeValue(key: key, accessibility: accessibility)
 
         XCTAssertEqual(spy.entranceCount, 1)
         XCTAssertEqual(spy.entranceToOtherMethods, 0)
         XCTAssertEqual(spy.query, outputQuery)
-        XCTAssertEqual(spy.attributesToUpdate, outputAttributesToUpdate)
         XCTAssertEqual(result, .failure(errSecMemoryError))
-    }
-
-    func testOtherMethodsNotToEnterInUpdateItem() {
-        _ = storage.removeValue(key: key, accessibility: accessibility)
-        _ = storage.searchAllValues(accessibility: accessibility)
-        _ = storage.searchValue(key: key, accessibility: accessibility)
-        _ = storage.addValue(key: key, value: value, accessibility: accessibility)
-
-        XCTAssertEqual(spy.entranceCount, .zero)
     }
 
     override func tearDown() {
@@ -62,11 +48,10 @@ final class UpdateValueInSecuredStorageWithGroupTests: XCTestCase {
     }
 }
 
-class SpyForUpdateItem: SecuredDataProvider {
+class SpyForRemoveItem: SecuredDataProvider {
     var entranceCount = 0
     var entranceToOtherMethods = 0
     var query: CFDictionary?
-    var attributesToUpdate: CFDictionary?
     var result: OSStatus?
 
     func tearDown() {
@@ -80,18 +65,18 @@ class SpyForUpdateItem: SecuredDataProvider {
         otherMethodsLogic()
     }
 
-    func copyItemMatching(query: CFDictionary, result: inout CFTypeRef?) -> OSStatus {
-        otherMethodsLogic()
-    }
-
-    func updateItem(query: CFDictionary, attributesToUpdate: CFDictionary) -> OSStatus {
+    func deleteItem(query: CFDictionary) -> OSStatus {
         entranceCount += 1
         self.query = query
-        self.attributesToUpdate = attributesToUpdate
 
         return result!
     }
-    func deleteItem(query: CFDictionary) -> OSStatus {
+
+    func updateItem(query: CFDictionary, attributesToUpdate: CFDictionary) -> OSStatus {
+        otherMethodsLogic()
+    }
+
+    func copyItemMatching(query: CFDictionary, result out: inout CFTypeRef?) -> OSStatus {
         otherMethodsLogic()
     }
 

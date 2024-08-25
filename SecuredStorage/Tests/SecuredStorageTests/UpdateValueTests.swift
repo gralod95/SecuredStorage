@@ -1,24 +1,24 @@
 import XCTest
 @testable import SecuredStorage
 
-final class SearchValueInSecuredStorageWithGroupTests: XCTestCase {
+final class UpdateValueTests: XCTestCase {
     private let storageName = "stubServiceName"
     private let accessGroup = "stubAccessGroup"
     private let key = "stubKey"
     private let value = "stubValue".data(using: .utf8)!
-    private let out = "stubOut".data(using: .utf8)!
     private let accessibility = SecuredStorage.Accessibility.afterFirstUnlock(shouldBeMigrated: false)
     private let outputQuery = [
         kSecClass as String: kSecClassGenericPassword,
         kSecAttrAccessible as String: SecuredStorage.Accessibility.afterFirstUnlock(shouldBeMigrated: false).queryValue,
         kSecAttrService as String: "stubServiceName",
         kSecAttrAccessGroup as String: "stubAccessGroup",
-        kSecAttrAccount as String: "stubKey",
-        kSecMatchLimit as String: kSecMatchLimitOne,
-        kSecReturnData as String: true
+        kSecAttrAccount as String: "stubKey"
+    ] as CFDictionary
+    private let outputAttributesToUpdate = [
+        kSecValueData as String: "stubValue".data(using: .utf8)!
     ] as CFDictionary
 
-    let spy: SpyForSearchValue = .init()
+    let spy: SpyForUpdateItem = .init()
 
     lazy var storage = SecuredStorage(
         name: storageName,
@@ -26,45 +26,26 @@ final class SearchValueInSecuredStorageWithGroupTests: XCTestCase {
         dataProvider: spy
     )
 
-    func testSearchValueSuccessfully() {
+    func testUpdateValueSuccessfully() {
         spy.result = errSecSuccess
-        spy.out = NSData(data: out)
-        let result = storage.searchValue(key: key, accessibility: accessibility)
+        let result = storage.updateValue(key: key, value: value, accessibility: accessibility)
 
         XCTAssertEqual(spy.entranceCount, 1)
         XCTAssertEqual(spy.entranceToOtherMethods, 0)
         XCTAssertEqual(spy.query, outputQuery)
-        XCTAssertEqual(result, .success(out))
+        XCTAssertEqual(spy.attributesToUpdate, outputAttributesToUpdate)
+        XCTAssertEqual(result, .success)
     }
 
-    func testSearchValueNotFound() {
-        spy.result = errSecItemNotFound
-        let result = storage.searchValue(key: key, accessibility: accessibility)
-
-        XCTAssertEqual(spy.entranceCount, 1)
-        XCTAssertEqual(spy.entranceToOtherMethods, 0)
-        XCTAssertEqual(spy.query, outputQuery)
-        XCTAssertEqual(result, .notFound)
-    }
-
-    func testSearchValueFailed() {
+    func testUpdateValueFailed() {
         spy.result = errSecMemoryError
-        let result = storage.searchValue(key: key, accessibility: accessibility)
+        let result = storage.updateValue(key: key, value: value, accessibility: accessibility)
 
         XCTAssertEqual(spy.entranceCount, 1)
         XCTAssertEqual(spy.entranceToOtherMethods, 0)
         XCTAssertEqual(spy.query, outputQuery)
+        XCTAssertEqual(spy.attributesToUpdate, outputAttributesToUpdate)
         XCTAssertEqual(result, .failure(errSecMemoryError))
-    }
-
-    func testOtherMethodsNotToEnterInCopyItemMatching() {
-        spy.result = errSecSuccess
-        _ = storage.addValue(key: key, value: value, accessibility: accessibility)
-        _ = storage.removeValue(key: key, accessibility: accessibility)
-        _ = storage.searchAllValues(accessibility: accessibility)
-        _ = storage.updateValue(key: key, value: value, accessibility: accessibility)
-
-        XCTAssertEqual(spy.entranceCount, 1)
     }
 
     override func tearDown() {
@@ -72,36 +53,36 @@ final class SearchValueInSecuredStorageWithGroupTests: XCTestCase {
     }
 }
 
-class SpyForSearchValue: SecuredDataProvider {
+class SpyForUpdateItem: SecuredDataProvider {
     var entranceCount = 0
     var entranceToOtherMethods = 0
     var query: CFDictionary?
+    var attributesToUpdate: CFDictionary?
     var result: OSStatus?
-    var out: CFTypeRef?
 
     func tearDown() {
         entranceCount = .zero
         entranceToOtherMethods = .zero
         query = nil
         result = nil
-        out = nil
     }
 
     func addItem(query: CFDictionary) -> OSStatus {
         otherMethodsLogic()
     }
 
-    func copyItemMatching(query: CFDictionary, result out: inout CFTypeRef?) -> OSStatus {
+    func copyItemMatching(query: CFDictionary, result: inout CFTypeRef?) -> OSStatus {
+        otherMethodsLogic()
+    }
+
+    func updateItem(query: CFDictionary, attributesToUpdate: CFDictionary) -> OSStatus {
         entranceCount += 1
         self.query = query
-        out = self.out
+        self.attributesToUpdate = attributesToUpdate
 
         return result!
     }
 
-    func updateItem(query: CFDictionary, attributesToUpdate: CFDictionary) -> OSStatus {
-        otherMethodsLogic()
-    }
     func deleteItem(query: CFDictionary) -> OSStatus {
         otherMethodsLogic()
     }

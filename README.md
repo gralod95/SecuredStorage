@@ -25,10 +25,31 @@ init(name: "myStorage")
 init(name: "myStorage", accessGroup: "myGroup")
 ```
 
-## Put data in storage
+## Set data to storage
+
+There are two ways to do it:
+- The Keychain approach: adding new value and update existing ones (`addValue`, `updateValue`)
+- A more convenient method for developers (in my opinion): save data (`saveValue`)
+
+### Save data in storage
+
+```swift
+myStorage.saveValue(key: "dataKey", value: Data(), accessibility: .whenUnlocked(shouldBeMigrated: false))
+```
+
+### Put data in storage
 
 ```swift
 myStorage.addValue(key: "dataKey", value: Data(), accessibility: .whenUnlocked(shouldBeMigrated: false))
+```
+
+This method may return `.tryToDuplicate`, which indicates that a value for the key already exists. 
+In this case, you should use `updateValue` or `saveValue` instead
+
+### Update data
+
+```swift
+myStorage.updateValue(key: "dataKey", value: Data(), accessibility: .whenUnlocked(shouldBeMigrated: false))
 ```
 
 ## Get data from storage
@@ -41,12 +62,6 @@ myStorage.searchValue(key: "dataKey", accessibility: .whenUnlocked(shouldBeMigra
 
 ```swift
 myStorage.searchAllValues(accessibility: .whenUnlocked(shouldBeMigrated: false))
-```
-
-## Update data
-
-```swift
-myStorage.updateValue(key: "dataKey", value: Data(), accessibility: .whenUnlocked(shouldBeMigrated: false))
 ```
 
 ## Remove data from storage

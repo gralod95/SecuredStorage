@@ -38,6 +38,8 @@ public struct SecuredStorage {
 
     // MARK: - Public methods
 
+    // MARK: Add / Update / Save
+
     public func addValue(
         key: String,
         value: Data,
@@ -58,6 +60,48 @@ public struct SecuredStorage {
             return .failure(requestStatus)
         }
     }
+
+    func updateValue(
+        key: String,
+        value: Data,
+        accessibility: Accessibility
+    ) -> UpdateResult {
+        var requestQuery = makeDefaultQueryParams(accessibility: accessibility)
+        requestQuery[kSecAttrAccount] = key
+
+        let attributesToUpdate: [CFString: Any?] = [kSecValueData: value]
+
+        let status = dataProvider.updateItem(
+            query: getDictionary(from: requestQuery),
+            attributesToUpdate: getDictionary(from: attributesToUpdate)
+        )
+
+        switch status {
+        case errSecSuccess:
+            return .success
+        default:
+            return .failure(status)
+        }
+    }
+
+    func saveValue(
+        key: String,
+        value: Data,
+        accessibility: Accessibility
+    ) -> UpdateResult {
+        let addResult = addValue(key: key, value: value, accessibility: accessibility)
+
+        switch addResult {
+        case .success:
+            return .success
+        case .tryToDuplicate:
+            return updateValue(key: key, value: value, accessibility: accessibility)
+        case .failure(let status):
+            return .failure(status)
+        }
+    }
+
+    // MARK: Get
 
     func searchValue(
         key: String,
@@ -110,28 +154,7 @@ public struct SecuredStorage {
         }
     }
 
-    func updateValue(
-        key: String,
-        value: Data,
-        accessibility: Accessibility
-    ) -> UpdateResult {
-        var requestQuery = makeDefaultQueryParams(accessibility: accessibility)
-        requestQuery[kSecAttrAccount] = key
-
-        let attributesToUpdate: [CFString: Any?] = [kSecValueData: value]
-
-        let status = dataProvider.updateItem(
-            query: getDictionary(from: requestQuery),
-            attributesToUpdate: getDictionary(from: attributesToUpdate)
-        )
-
-        switch status {
-        case errSecSuccess:
-            return .success
-        default:
-            return .failure(status)
-        }
-    }
+    // MARK: Remove
 
     func removeValue(
         key: String,

@@ -1,7 +1,7 @@
 import XCTest
 @testable import SecuredStorage
 
-final class SearchAllValuesInSecuredStorageWithGroupTests: XCTestCase {
+final class SearchValueTests: XCTestCase {
     private let storageName = "stubServiceName"
     private let accessGroup = "stubAccessGroup"
     private let key = "stubKey"
@@ -13,12 +13,12 @@ final class SearchAllValuesInSecuredStorageWithGroupTests: XCTestCase {
         kSecAttrAccessible as String: SecuredStorage.Accessibility.afterFirstUnlock(shouldBeMigrated: false).queryValue,
         kSecAttrService as String: "stubServiceName",
         kSecAttrAccessGroup as String: "stubAccessGroup",
-        kSecMatchLimit as String: kSecMatchLimitAll,
-        kSecReturnData as String: true,
-        kSecReturnAttributes as String: true
+        kSecAttrAccount as String: "stubKey",
+        kSecMatchLimit as String: kSecMatchLimitOne,
+        kSecReturnData as String: true
     ] as CFDictionary
 
-    let spy: SpyForSearchAllValues = .init()
+    let spy: SpyForSearchValue = .init()
 
     lazy var storage = SecuredStorage(
         name: storageName,
@@ -26,20 +26,20 @@ final class SearchAllValuesInSecuredStorageWithGroupTests: XCTestCase {
         dataProvider: spy
     )
 
-    func testSearchAllValuesSuccessfully() {
+    func testSearchValueSuccessfully() {
         spy.result = errSecSuccess
-        spy.out = [[kSecAttrAccount as String: key, kSecValueData as String: out]] as CFArray
-        let result = storage.searchAllValues(accessibility: accessibility)
+        spy.out = NSData(data: out)
+        let result = storage.searchValue(key: key, accessibility: accessibility)
 
         XCTAssertEqual(spy.entranceCount, 1)
         XCTAssertEqual(spy.entranceToOtherMethods, 0)
         XCTAssertEqual(spy.query, outputQuery)
-        XCTAssertEqual(result, .success([key: out]))
+        XCTAssertEqual(result, .success(out))
     }
 
-    func testSearchAllValuesNotFound() {
+    func testSearchValueNotFound() {
         spy.result = errSecItemNotFound
-        let result = storage.searchAllValues(accessibility: accessibility)
+        let result = storage.searchValue(key: key, accessibility: accessibility)
 
         XCTAssertEqual(spy.entranceCount, 1)
         XCTAssertEqual(spy.entranceToOtherMethods, 0)
@@ -47,9 +47,9 @@ final class SearchAllValuesInSecuredStorageWithGroupTests: XCTestCase {
         XCTAssertEqual(result, .notFound)
     }
 
-    func testSearchAllValuesFailed() {
+    func testSearchValueFailed() {
         spy.result = errSecMemoryError
-        let result = storage.searchAllValues(accessibility: accessibility)
+        let result = storage.searchValue(key: key, accessibility: accessibility)
 
         XCTAssertEqual(spy.entranceCount, 1)
         XCTAssertEqual(spy.entranceToOtherMethods, 0)
@@ -57,22 +57,12 @@ final class SearchAllValuesInSecuredStorageWithGroupTests: XCTestCase {
         XCTAssertEqual(result, .failure(errSecMemoryError))
     }
 
-    func testOtherMethodsNotToEnterInCopyItemMatching() {
-        spy.result = errSecSuccess
-        _ = storage.addValue(key: key, value: value, accessibility: accessibility)
-        _ = storage.removeValue(key: key, accessibility: accessibility)
-        _ = storage.searchValue(key: key, accessibility: accessibility)
-        _ = storage.updateValue(key: key, value: value, accessibility: accessibility)
-
-        XCTAssertEqual(spy.entranceCount, 1)
-    }
-
     override func tearDown() {
         spy.tearDown()
     }
 }
 
-class SpyForSearchAllValues: SecuredDataProvider {
+class SpyForSearchValue: SecuredDataProvider {
     var entranceCount = 0
     var entranceToOtherMethods = 0
     var query: CFDictionary?
@@ -102,6 +92,7 @@ class SpyForSearchAllValues: SecuredDataProvider {
     func updateItem(query: CFDictionary, attributesToUpdate: CFDictionary) -> OSStatus {
         otherMethodsLogic()
     }
+    
     func deleteItem(query: CFDictionary) -> OSStatus {
         otherMethodsLogic()
     }
