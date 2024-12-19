@@ -3,7 +3,6 @@
 //  SecuredStorage
 //
 //  Created by Odinokov G. A. on 19.08.2024.
-//  Copyright © 2024 BCS-Broker. All rights reserved.
 //
 
 import Foundation
